@@ -28,7 +28,8 @@ function parseKakaoText(text) {
   let currentDate = null;
   let last = null;
 
-  const dateLine = /^-+\s*(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일.*?-+$/;
+  const dateLine =
+    /^(\d{4})(?:년|\.)\s*(\d{1,2})(?:월|\.)\s*(\d{1,2})(?:일|\.)/;
   const bracketLine = /^\[(.+?)\]\s*\[(오전|오후)\s*(\d{1,2}):(\d{2})\]\s*(.*)$/;
   const commaLine = /^(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s*(오전|오후)\s*(\d{1,2}):(\d{2}),\s*(.+?)\s*:\s*(.*)$/;
 
