@@ -23,58 +23,97 @@ function to24Hour(period, hour) {
 }
 
 function parseKakaoText(text) {
-  const lines = text.replace(/\r/g, '').split('\n');
+  const lines = text.replace(/\r/g, "").split("\n");
+
   const messages = [];
   let currentDate = null;
   let last = null;
 
+  // 1) 날짜 줄 (2026년 3월 9일 월요일)
   const dateLine = /^(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/;
-  const bracketLine = /^\[(.+?)\]\s*\[(오전|오후)\s*(\d{1,2}):(\d{2})\]\s*(.*)$/;
+
+  // 2) 괄호형
+  // [이름] [오전 8:31] 내용
+  const bracketLine =
+    /^\[(.+?)\]\s*\[(오전|오후)\s*(\d{1,2}):(\d{2})\]\s*(.*)$/;
+
+  // 3) 콤마형 (카카오 export)
+  // 2026. 3. 9. 오후 8:31, 이름 : 내용
   const commaLine =
-/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(오전|오후)\s*(\d{1,2}):(\d{2}),\s*([^:]+?)\s*:\s*(.+)$/;
+    /^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(오전|오후)\s*(\d{1,2}):(\d{2}),\s*([^:]+?)\s*:\s*(.*)$/;
 
-  for (const rawLine of lines) {
-    const line = rawLine.trimEnd();
-    if (!line.trim()) continue;
+  const to24 = (period, hour) => {
+    let h = Number(hour);
+    if (period === "오후" && h !== 12) h += 12;
+    if (period === "오전" && h === 12) h = 0;
+    return h;
+  };
 
+  for (let raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+
+    // 1) 날짜 처리
     const d = line.match(dateLine);
     if (d) {
-      currentDate = `${d[1]}-${String(d[2]).padStart(2, '0')}-${String(d[3]).padStart(2, '0')}`;
+      currentDate = `${d[1]}-${String(d[2]).padStart(2, "0")}-${String(d[3]).padStart(2, "0")}`;
+      last = null;
       continue;
     }
 
+    // 2) 콤마형 메시지
     const c = line.match(commaLine);
     if (c) {
-      const hour = to24Hour(c[4], c[5]);
+      const hour = to24(c[4], c[5]);
+
       last = {
         name: c[7].trim(),
         text: c[8].trim(),
-        date: `${c[1]}-${String(c[2]).padStart(2, '0')}-${String(c[3]).padStart(2, '0')}`,
-        time: `${String(hour).padStart(2, '0')}:${c[6]}`
+        date: `${c[1]}-${String(c[2]).padStart(2, "0")}-${String(c[3]).padStart(2, "0")}`,
+        time: `${String(hour).padStart(2, "0")}:${c[6]}`
       };
+
       messages.push(last);
       continue;
     }
 
+    // 3) 괄호형 메시지
     const b = line.match(bracketLine);
     if (b && currentDate) {
-      const hour = to24Hour(b[2], b[3]);
+      const hour = to24(b[2], b[3]);
+
       last = {
         name: b[1].trim(),
         text: b[5].trim(),
         date: currentDate,
-        time: `${String(hour).padStart(2, '0')}:${b[4]}`
+        time: `${String(hour).padStart(2, "0")}:${b[4]}`
       };
+
       messages.push(last);
       continue;
     }
 
-    if (last && !line.includes('님이 들어왔습니다') && !line.includes('님이 나갔습니다')) {
-      last.text += `\n${line.trim()}`;
+    // 4) fallback: 줄바꿈 메시지 합치기 (핵심 안정성)
+    if (
+      last &&
+      !line.includes("님이 들어왔습니다") &&
+      !line.includes("님이 나갔습니다") &&
+      !line.includes("초대했습니다")
+    ) {
+      last.text += "\n" + line;
     }
   }
 
-  return messages.filter(m => m.name && m.text && !m.name.includes('저장한 날짜'));
+  // 5) 최종 필터링 (깨진 데이터 제거)
+  return messages.filter(
+    (m) =>
+      m &&
+      m.name &&
+      m.text &&
+      m.name.length > 0 &&
+      m.text.length > 0 &&
+      !m.name.includes("저장한 날짜")
+  );
 }
 
 function countContains(text, words) {
