@@ -1,6 +1,6 @@
 {
-  "name": "과제메이트",
-  "short_name": "과제메이트",
+  "name": "과제@메이트",
+  "short_name": "과제@메이트",
   "description": "카카오톡 TXT를 분석해 조별과제 기여도를 계산하고 D-DAY 일정을 관리하는 앱",
   "start_url": "./index.html",
   "scope": "./",
